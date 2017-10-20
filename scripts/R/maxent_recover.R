@@ -125,15 +125,6 @@ raster <- raster("./bio7_13.tif")
 # APPEND A RESPONSE COLUMN TO THE POPULATION DATA
 glossy_data_frame_glm$y <- 1
 
-# nh_data_frame_glm <-
-#   nh_data_frame_glm[sample(nrow(nh_data_frame_glm),
-#                            nrow(glossy_data_frame_glm),
-#                            replace = FALSE), ]
-nh_data_frame_glm$y <- 0
-
-#nh_data_frame_glm = rbind(nh_data_frame_glm, glossy_data_frame_glm)
-
-#X <<- nh_data_frame_glm
 X <<- glossy_data_frame_glm
 
 n_features <- ncol(X) - 1
