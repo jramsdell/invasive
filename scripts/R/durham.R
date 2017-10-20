@@ -200,17 +200,14 @@ glossy_coords <- na.omit(glossy_coords)
 glossy_spatial_points <- SpatialPoints(glossy_coords, proj4string=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
 
 # PLOT THE POLYGON AND POINTS
-# map<-get_map(location='united states', zoom=3, maptype = "terrain", source='google',color='color')
-# ggmap(map)+
-#   
-#   geom_point(data = nh_coords, aes(x = as.numeric(nh_coords$longitude), y = as.numeric(nh_coords$latitude)), 
-#              fill = "green", alpha =0.8, size = 0.0001, shape = 21) +
-#   
-#   geom_point(data = glossy_coords, aes(x = as.numeric(glossy_coords$longitude), y = as.numeric(glossy_coords$latitude)), 
-#              fill = "red", alpha =0.8, size = 0.001, shape = 21) +
-#   
-#   geom_polygon(aes(x=coordinates(nh_polygon)[,1], y=coordinates(nh_polygon)[,2]), data=nh_polygon, alpha=0.5) +
-#   guides(fill=FALSE, alpha=FALSE, size=FALSE)
+map <- get_map(location='united states', zoom=3, maptype = "terrain", source='google',color='color')
+ggmap(map)+
+   geom_point(data = nh_coords, aes(x = as.numeric(nh_coords$longitude), y = as.numeric(nh_coords$latitude)), 
+              fill = "green", alpha =0.8, size = 0.0001, shape = 21) +
+   geom_point(data = glossy_coords, aes(x = as.numeric(glossy_coords$longitude), y = as.numeric(glossy_coords$latitude)), 
+              fill = "red", alpha =0.8, size = 0.001, shape = 21) +
+   geom_polygon(aes(x=coordinates(nh_polygon)[,1], y=coordinates(nh_polygon)[,2]), data=nh_polygon, alpha=0.5) +
+   guides(fill=FALSE, alpha=FALSE, size=FALSE)
 
 # GET UNIQUE YEARS IN CASE THEY ARE NEEDED
 years = unique(glossy_data$Observation_.Date_.Year)
@@ -224,27 +221,29 @@ Ps1 = SpatialPolygons(list(Polygons(list(nh_polygon), ID = "a")), proj4string=CR
 load <- FALSE
 bio_13 <- stack()
 var_names = c()
+
+data.path <- "../../resources"
+
 if(load == FALSE){
-  zone_13_tmean <- raster("./data/clim_zones/bio_13_tif/bio1_13.tif")
-  zone_13_mdr <- raster("./data/clim_zones/bio_13_tif/bio2_13.tif")
-  zone_13_iso <- raster("./data/clim_zones/bio_13_tif/bio3_13.tif")
-  zone_13_ts <- raster("./data/clim_zones/bio_13_tif/bio4_13.tif")
-  zone_13_tmax_month <- raster("./data/clim_zones/bio_13_tif/bio5_13.tif")
-  zone_13_tmin_month <- raster("./data/clim_zones/bio_13_tif/bio6_13.tif")
-  zone_13_tar <- raster("./data/clim_zones/bio_13_tif/bio7_13.tif")
-  zone_13_tmean_wettest <- raster("./data/clim_zones/bio_13_tif/bio8_13.tif")
-  zone_13_tmean_driest <- raster("./data/clim_zones/bio_13_tif/bio9_13.tif")
-  zone_13_tmean_warmest <- raster("./data/clim_zones/bio_13_tif/bio10_13.tif")
-  zone_13_tmean_coldest <- raster("./data/clim_zones/bio_13_tif/bio11_13.tif")
-  zone_13_prec_an <- raster("./data/clim_zones/bio_13_tif/bio12_13.tif")
-  zone_13_prec_wettest_month <- raster("./data/clim_zones/bio_13_tif/bio13_13.tif")
-  zone_13_prec_driest_month <- raster("./data/clim_zones/bio_13_tif/bio14_13.tif")
-  zone_13_ps <- raster("./data/clim_zones/bio_13_tif/bio15_13.tif")
-  zone_13_prec_wettest <- raster("./data/clim_zones/bio_13_tif/bio16_13.tif")
-  zone_13_prec_driest <- raster("./data/clim_zones/bio_13_tif/bio17_13.tif")
-  zone_13_prec_warmest <- raster("./data/clim_zones/bio_13_tif/bio18_13.tif")
-  zone_13_prec_coldest <- raster("./data/clim_zones/bio_13_tif/bio19_13.tif")
-  
+  zone_13_tmean <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio1_13.tif", sep = ''))
+  zone_13_mdr <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio2_13.tif",sep=''))
+  zone_13_iso <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio3_13.tif",sep=''))
+  zone_13_ts <- raster(paste(data.path,  "/clim_zones/bio_13_tif/bio4_13.tif",sep=''))
+  zone_13_tmax_month <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio5_13.tif",sep=''))
+  zone_13_tmin_month <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio6_13.tif",sep=''))
+  zone_13_tar <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio7_13.tif",sep=''))
+  zone_13_tmean_wettest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio8_13.tif",sep=''))
+  zone_13_tmean_driest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio9_13.tif",sep=''))
+  zone_13_tmean_warmest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio10_13.tif",sep=''))
+  zone_13_tmean_coldest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio11_13.tif",sep=''))
+  zone_13_prec_an <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio12_13.tif",sep=''))
+  zone_13_prec_wettest_month <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio13_13.tif",sep=''))
+  zone_13_prec_driest_month <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio14_13.tif",sep=''))
+  zone_13_ps <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio15_13.tif",sep=''))
+  zone_13_prec_wettest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio16_13.tif",sep=''))
+  zone_13_prec_driest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio17_13.tif",sep=''))
+  zone_13_prec_warmest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio18_13.tif",sep=''))
+  zone_13_prec_coldest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio19_13.tif",sep=''))
   
   bio_13 <- stack(bio_13, 
                   zone_13_tmean,
@@ -265,8 +264,7 @@ if(load == FALSE){
                   zone_13_prec_wettest,
                   zone_13_prec_driest,
                   zone_13_prec_warmest,
-                  zone_13_prec_coldest
-  )
+                  zone_13_prec_coldest)
   
   var_names <- c(
     "bio1",
@@ -317,9 +315,9 @@ if(load == FALSE){
   
   names(bio_13) <- var_names
   bio_13 <- crop(bio_13, nh_bounding_box)
-  saveRDS(bio_13, "./data/bio_13.rds")
+  saveRDS(bio_13, paste(data.path, "/bio_13.rds", sep = ''))
 }else{
-  bio_13 <- readRDS("./data/bio_13.rds")
+  bio_13 <- readRDS(paste(data.path, "/bio_13.rds", sep = ''))
 }
 
 # GET THE GLOSSY POINTS FROM RASTER
