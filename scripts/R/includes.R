@@ -19,13 +19,13 @@ if(!require(raster)){install.packages("raster", dependencies=TRUE);library(raste
 #if(!require(spatstat)){install.packages("spatstat", dependencies=TRUE);library(spatstat)}
 #if(!require(scales)){install.packages("scales", dependencies=TRUE);library(scales)}
 #if(!require(QRM)){install.packages("QRM", dependencies=TRUE);library(QRM)}
-#if(!require(entropy)){install.packages("entropy", dependencies=TRUE);library(entropy)}
+if(!require(entropy)){install.packages("entropy", dependencies=TRUE);library(entropy)}
 #if(!require(Metrics)){install.packages("Metrics", dependencies=TRUE);library(Metrics)}
 #if(!require(optparse)){install.packages("optparse", dependencies=TRUE);library(optparse)}
 if(!require(dplyr)){install.packages("plyr", dependencies=TRUE);library(plyr)}
 
 # cell data from durham
-glossy_data_frame_glm <- readRDS("./glossy_data_frame.rds")
+glossy_data_frame_glm <- readRDS("../../resources/glossy_data_frame.rds")
 
 costToClean <<- 1
 costToMiss <<- 10

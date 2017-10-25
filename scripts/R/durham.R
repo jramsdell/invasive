@@ -2,7 +2,7 @@ options(max.print = .Machine$integer.max)
 rm(list=ls())
 
 # installs packages
-list.of.packages <- c("ggplot2", "rgeos", "Rcpp", "ggmap", "stringr", "raster", "sp","zoo", "geosphere")
+list.of.packages <- c("ggplot2", "rgeos", "Rcpp", "ggmap", "stringr", "raster", "sp","zoo", "geosphere", "ggproto")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 
 if(length(new.packages)) install.packages(new.packages)
@@ -30,6 +30,8 @@ glossy_data$Observation_.Date_.Year = as.numeric(ret[, 3])
 ret <- str_split_fixed(glossy_data$Coordinates,",",2)
 glossy_data$Coordinates_.Latitude <- as.double(ret[,1])
 glossy_data$Coordinates_.Longitude <- as.double(ret[,2])
+
+# Remove unecessary columns
 
 glossy_data$Reporter <- NULL
 glossy_data$Updated_.By <- NULL
@@ -153,6 +155,9 @@ glossy_data$Patch_.Type <- NULL
 glossy_data$Collection_.Time <- NULL
 glossy_data$Confidence <- NULL
 glossy_data$Treatment_.Area <- NULL
+
+# Remap months to numbers
+
 glossy_data$Observation_.Date_.Month[which(glossy_data$Observation_.Date_.Month == "January")] <- 1
 glossy_data$Observation_.Date_.Month[which(glossy_data$Observation_.Date_.Month == "February")] <- 2
 glossy_data$Observation_.Date_.Month[which(glossy_data$Observation_.Date_.Month == "March")] <- 3
@@ -169,7 +174,7 @@ glossy_data$Observation_.Date_.Month <- as.numeric(glossy_data$Observation_.Date
 glossy_data <- glossy_data[order(glossy_data$Observation_.Date_.Year),]
 
 # EXTRACT COORDINATES
-coor_ <- data.frame("longitude"=glossy_data$Coordinates_.Longitude, "latitude"=glossy_data$Coordinates_.Latitude)
+coor_ <- data.frame("longitude" = glossy_data$Coordinates_.Longitude, "latitude" = glossy_data$Coordinates_.Latitude)
 coor_ <- coor_[order(-coor_$longitude, coor_$latitude),  ]
 
 pol1 <- chull(as.matrix(coor_))
@@ -200,20 +205,20 @@ glossy_coords <- na.omit(glossy_coords)
 glossy_spatial_points <- SpatialPoints(glossy_coords, proj4string=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
 
 # PLOT THE POLYGON AND POINTS
-map <- get_map(location='united states', zoom=3, maptype = "terrain", source='google',color='color')
-ggmap(map)+
+map <- get_map(location = 'united states', zoom = 3, maptype = "terrain", source = 'google', color = 'color')
+ggmap(map) + 
    geom_point(data = nh_coords, aes(x = as.numeric(nh_coords$longitude), y = as.numeric(nh_coords$latitude)), 
-              fill = "green", alpha =0.8, size = 0.0001, shape = 21) +
+              fill = "green", alpha = 0.8, size = 0.0001, shape = 21) +
    geom_point(data = glossy_coords, aes(x = as.numeric(glossy_coords$longitude), y = as.numeric(glossy_coords$latitude)), 
-              fill = "red", alpha =0.8, size = 0.001, shape = 21) +
-   geom_polygon(aes(x=coordinates(nh_polygon)[,1], y=coordinates(nh_polygon)[,2]), data=nh_polygon, alpha=0.5) +
-   guides(fill=FALSE, alpha=FALSE, size=FALSE)
+              fill = "red", alpha = 0.8, size = 0.001, shape = 21) +
+   geom_polygon(aes(x = coordinates(nh_polygon)[,1], y = coordinates(nh_polygon)[,2]), data = nh_polygon, alpha = 0.5) +
+   guides(fill = FALSE, alpha = FALSE, size = FALSE)
 
 # GET UNIQUE YEARS IN CASE THEY ARE NEEDED
 years = unique(glossy_data$Observation_.Date_.Year)
 
 #CREATE A SPATIAL POLYGON FOR THE BOUNDING BOX
-Ps1 = SpatialPolygons(list(Polygons(list(nh_polygon), ID = "a")), proj4string=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+Ps1 = SpatialPolygons(list(Polygons(list(nh_polygon), ID = "a")), proj4string = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
 
 # ZONE 13 CONTAINS THE DESIRED LOCATION
 # If already created the data structure, set load to TRUE
@@ -322,16 +327,16 @@ if(load == FALSE){
 
 # GET THE GLOSSY POINTS FROM RASTER
 # CREATE DATAFRAMES FROM RASTER FOR PRESENCE AND UNKNONW POINTS
-glossy_data_frame <- extract(bio_13, glossy_spatial_points, method='bilinear', na.rm=TRUE)
+glossy_data_frame <- extract(bio_13, glossy_spatial_points, method = 'bilinear', na.rm = TRUE)
 glossy_data_frame <- as.data.frame(glossy_data_frame)
 glossy_data_frame <- cbind(glossy_coords$latitude, glossy_data_frame)
 glossy_data_frame <- cbind(glossy_coords$longitude, glossy_data_frame)
 colnames(glossy_data_frame) <- df_names
 glossy_data_frame <- glossy_data_frame[complete.cases(glossy_data_frame), ]
 
-nh_raster <- crop(bio_13, extent(nh_bounding_box), snap='in')
+nh_raster <- crop(bio_13, extent(nh_bounding_box), snap = 'in')
 fr <- rasterize(nh_bounding_box, nh_raster)
-nh_raster <- mask(x=nh_raster, mask = fr)
+nh_raster <- mask(x = nh_raster, mask = fr)
 nh_coordinate_list <- coordinates(nh_raster)
 
 nh_data_frame <- as.data.frame(nh_raster)
@@ -354,6 +359,5 @@ sprintf(" %d unknown", nrow(nh_data_frame))
 #   geom_point(data = nh_data_frame, aes(x = as.numeric(nh_data_frame$lon), y = as.numeric(nh_data_frame$lat)),
 #              fill = "green", alpha =0.8, size = 0.0001, shape = 21)
 
-saveRDS(nh_data_frame, "./nh_data_frame.rds")
-saveRDS(glossy_data_frame, "./glossy_data_frame.rds")
-
+saveRDS(nh_data_frame, "../../resources/nh_data_frame.rds")
+saveRDS(glossy_data_frame, "../../resources/glossy_data_frame.rds")
