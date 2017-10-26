@@ -42,66 +42,56 @@ calcMaxent <- function(newX, pi_base, pi_tilde){
   lambdas = vector(mode = 'numeric', ncol(newX))
   rounds <- 0
   n_features <- ncol(newX)
-  converged <- FALSE
   step = 0.1
-  while (!converged && (rounds < 1000)) {
+  
+  calculateLogLoss <- function(lambdas) {
     QL <- calcQL(newX, lambdas)
     log_loss <- calcWeightExp(pi_tilde, -log(QL))
+    return(log_loss)
+  }
+  
+  while (rounds < 1000) {
+    log_loss <- calculateLogLoss(lambdas)
     starting_log_loss <- log_loss
     
-    for (f in 1:n_features) {
-      i = 0
-      while (1) {
-        # cat(sprintf("Round #%d \tFeature #%d \t i=%d\n", rounds, f, i))
-        temp_lambdas <- lambdas
-        # ret <- calcAlpha(QL, pi_tilde, newX[, f])
-        delta = step
-        temp_lambdas[f] <- temp_lambdas[f] - (2 ^ i) * delta
-        QL_ <- calcQL(newX, temp_lambdas)
-        log_loss_ <- calcWeightExp(pi_tilde, -log(QL_))
-        
-        if (log_loss_ < log_loss) {
+    for (feature in 1:n_features) {
+      # cat(sprintf("Round #%d \tFeature #%d \t i=%d\n", rounds, f, i))
+      temp_lambdas <- lambdas
+      temp_lambdas[feature] <- lambdas[feature] - step
+      log_loss_ <- calculateLogLoss(temp_lambdas)
+      
+      if (log_loss_ < log_loss) {
+        lambdas <- temp_lambdas
 
-          lambdas <- temp_lambdas
-          # cat(" \tUpdating\n")
-
-          if (abs(log_loss - log_loss_) < 0.000001) {
-            # cat("Converged\n")
-            converged = TRUE
-            log_loss <- log_loss_
-            break
-          } else {
-            log_loss <- log_loss_
-            break
-          }
-          
-        } else {
-          temp_lambdas <- lambdas
-          delta = -step
-          temp_lambdas[f] <- temp_lambdas[f] - (2 ^ i) * delta
-          QL_ <- calcQL(newX, temp_lambdas)
-          log_loss_ <- calcWeightExp(pi_tilde, -log(QL_))
-          if (log_loss_ < log_loss) {
-            lambdas <- temp_lambdas
-
-            if (abs(log_loss - log_loss_) < 0.000001) {
-              converged = TRUE
-              log_loss <- log_loss_
-              break
-            } else {
-              log_loss <- log_loss_
-              break
-            }
-          } else {
-            break
-          }
-          i <- i + 1
+        if (abs(log_loss - log_loss_) < 0.000001) {
+          break
         }
+        
+        log_loss <- log_loss_
+        next  
       }
+      
+      temp_lambdas <- lambdas
+      temp_lambdas[feature] <- lambdas[feature] + step
+      log_loss_ <- calculateLogLoss(temp_lambdas)
+      
+      if (log_loss_ < log_loss) {
+        lambdas <- temp_lambdas
+
+        if (abs(log_loss - log_loss_) < 0.000001) {
+          break
+        }
+        
+        log_loss <- log_loss_
+        
+      }
+      
     }
+    
     if (abs(log_loss - starting_log_loss) < 0.00001) {
-      converged = TRUE
+      break
     }
+    
     rounds <- rounds + 1
   }
 
@@ -184,6 +174,7 @@ sample_num <- array(0, num_steps)
 kl_divergence <- array(0, num_steps)
 kl_divergence_com <- array(0, num_steps)
 kl_idx <- 1
+
 for (i in 1:num_steps) {
   sample_num[i] <- step
   step <- step + step_size
@@ -197,7 +188,7 @@ for (multi_samp in sample_num) {
   zero <- vector(mode = "numeric", length = length(multi_samp))
   for (it in 1:n_iter) {
     cat(sprintf("KL idx = %d, %d samples, iteration %d \n", kl_idx, sample_num[kl_idx], it))
-    X <- XX[sample(1:nrow(X), initial_pop, replace = TRUE),]
+    X <- XX[sample(1:nrow(X), initial_pop, replace = FALSE),]
 
     # # normalize, but skip the probablity
     X <- sapply(X[, 1:ncol(X)], rescale, to = c(0, 1))
@@ -225,6 +216,7 @@ for (multi_samp in sample_num) {
         pi_tilde[i] = 0.0
       }
     }
+    
     ret <- calcMaxent(newX, pi_base, pi_tilde)
     kl_divergence[kl_idx] <- kl_divergence[kl_idx] + ret$kl
 
@@ -248,12 +240,15 @@ for (multi_samp in sample_num) {
         pi_tilde[i] = 0.0
       }
     }
+    
     ret <- calcMaxent(newX, pi_base, pi_tilde)
     kl_divergence_com[kl_idx] <- kl_divergence[kl_idx] + ret$kl
   }
+  
   kl_divergence_com[kl_idx] <- kl_divergence[kl_idx] / n_iter
   kl_idx <- kl_idx + 1
 }
+
 filename_kl <- paste("KL_Divergence_", format(Sys.Date(), "%m_%d_%y_"), initial_pop, "_", length(kl_divergence), ".pdf", sep = "")
 kl_dataframe <- data.frame(x = 1:length(kl_divergence) * step_size * initial_pop, kl = kl_divergence)
 
