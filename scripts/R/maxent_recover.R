@@ -169,16 +169,12 @@ initial_pop = floor(n_samples / 5)
 num_steps = 20
 n_iter = 20
 step_size = floor(initial_pop / num_steps)
-step = step_size
-sample_num <- array(0, num_steps)
+
 kl_divergence <- array(0, num_steps)
 kl_divergence_com <- array(0, num_steps)
 kl_idx <- 1
 
-for (i in 1:num_steps) {
-  sample_num[i] <- step
-  step <- step + step_size
-}
+sample_num <- seq(step_size, length.out = n_iter, by = step_size)
 
 n_features <- ncol(XX)
 
@@ -191,17 +187,13 @@ for (multi_samp in sample_num) {
     X <- XX[sample(1:nrow(X), initial_pop, replace = FALSE),]
 
     # # normalize, but skip the probablity
-    X <- sapply(X[, 1:ncol(X)], rescale, to = c(0, 1))
-
-    # assertthat::are_equal(1, sum(prob))
-    X <- as.matrix(X)
+    X <- apply(X, 2, rescale)
 
     # create random weights
     lambdas_base = as.vector(runif(n_features))
-    nominator <- exp((X %*% lambdas_base))
-    Z <- sum(nominator)
+    
     # create π
-    pi_base <- nominator / Z
+    pi_base <- calcQL(X, lambdas_base)
 
     res <- rmultinom(1, size = multi_samp, prob = pi_base)
 
@@ -222,11 +214,9 @@ for (multi_samp in sample_num) {
 
     #we now use the derived weights as the generating distribution
     lambdas_base = ret$lambdas
-    nominator <- exp((X %*% lambdas_base))
-    Z <- sum(nominator)
+    
     # create π
-    pi_base <- nominator / Z
-
+    pi_base <- calcQL(X, lambdas_base)
     res <- rmultinom(1, size = multi_samp, prob = pi_base)
 
     newX <- X
