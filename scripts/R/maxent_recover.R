@@ -4,10 +4,10 @@ source("includes.R")
 #' return q_lambda
 #' @param X matrix of feature values
 #' @param lambda the feature weight vector
-calcQL <- function(X, lambda) {
-  nom <- exp((X %*% lambda))
-  Z <- sum(nom)
-  return(nom / Z)
+softmax <- function(x, lambda) {
+  nom <- exp((x %*% lambda))
+  z <- sum(nom)
+  return(nom / z)
 }
 
 #' return weightd expected value
@@ -38,19 +38,19 @@ calcAlpha <- function(q_l, p_t, fi) {
 #' @param newX data samples
 #' @param pi_tilde the empirical distribution to approximate
 #' @return the generated lambdas, the generated distribution, and the kl divergence
-calcMaxent <- function(newX, pi_base, pi_tilde){
-  lambdas = vector(mode = 'numeric', ncol(newX))
-  rounds <- 0
-  n_features <- ncol(newX)
+maxent <- function(X, pi_tilde, iterations = 1000){
+  lambdas = vector(mode = 'numeric', ncol(X))
+  i <- 0
+  n_features <- ncol(X)
   step = 0.1
   
   calculateLogLoss <- function(lambdas) {
-    QL <- calcQL(newX, lambdas)
+    QL <- softmax(X, lambdas)
     log_loss <- calcWeightExp(pi_tilde, -log(QL))
     return(log_loss)
   }
   
-  while (rounds < 1000) {
+  for (i in 0:iterations) {
     log_loss <- calculateLogLoss(lambdas)
     starting_log_loss <- log_loss
     
@@ -83,181 +83,87 @@ calcMaxent <- function(newX, pi_base, pi_tilde){
         }
         
         log_loss <- log_loss_
-        
       }
-      
     }
     
     if (abs(log_loss - starting_log_loss) < 0.00001) {
       break
     }
-    
-    rounds <- rounds + 1
   }
 
-  nominator <- exp((newX %*% lambdas))
-  Z <- sum(nominator)
-  pi_hat <- nominator / Z
-  kl <- KL.plugin(pi_base, pi_hat)
-  retList = list("lambdas" = lambdas, "pi_hat" = pi_hat, "kl" = kl)
-  return(retList)
-}
-# Load a raster so cells are available
-raster <- raster("../../resources/bio7_13.tif")
-
-# APPEND A RESPONSE COLUMN TO THE POPULATION DATA
-glossy_data_frame_glm$y <- 1
-
-X <<- glossy_data_frame_glm
-
-n_features <- ncol(X) - 1
-#  X dataset (dataframe)
-# row is a data point
-
-n_samples = nrow(X)
-n_samples_pos = sum(X$y)
-
-# ALREADY_FOUND = FALSE
-# if(ALREADY_FOUND == FALSE){
-# group by cells but it might not be necessary
-for (i in 1:nrow(X)) {
-  X$cell[i] <- cellFromXY(raster, cbind(X$lon[i], X$lat[i]))
+  return(lambdas)
 }
 
-X <- group_by(X, cell) %>%
-  summarize(
-    # prob = sum(y) / n_samples_pos,
-    lon = mean(lon),
-    lat = mean(lat),
-    bio1 = mean(bio1),
-    bio2 = mean(bio2),
-    bio3 = mean(bio3),
-    bio4 = mean(bio4),
-    bio5 = mean(bio5),
-    bio6 = mean(bio6),
-    bio8 = mean(bio8),
-    bio9 = mean(bio9),
-    bio10 = mean(bio10),
-    bio11 = mean(bio11),
-    bio12 = mean(bio12),
-    bio13 = mean(bio13),
-    bio14 = mean(bio14),
-    bio15 = mean(bio15),
-    bio16 = mean(bio16),
-    bio17 = mean(bio17),
-    bio18 = mean(bio18),
-    bio19 = mean(bio19)
-  )
-saveRDS(X, "../../resources/dataWithCells.rds")
-# }else{
-#   X <<- readRDS("../../resources/dataWithCells.rds")
-# }
-
-# X$cell <- NULL
-X$lon <- NULL
-X$lat <- NULL
-
-cells_array <- X$cell
-X$cell <- NULL
-
-lc <- findLinearCombos(X)
-X[lc$remove] <- NULL
-
-XX <- X
-
-initial_pop = floor(n_samples / 5)
-num_steps = 20
-n_iter = 20
-step_size = floor(initial_pop / num_steps)
-
-kl_divergence <- array(0, num_steps)
-kl_divergence_com <- array(0, num_steps)
-kl_idx <- 1
-
-sample_num <- seq(step_size, length.out = n_iter, by = step_size)
-
-n_features <- ncol(XX)
-
-for (multi_samp in sample_num) {
-  weight_df = data.frame(matrix(ncol = 5, nrow = n_features))
-  dist_df = data.frame(matrix(ncol = 4, nrow = initial_pop))
-  zero <- vector(mode = "numeric", length = length(multi_samp))
-  for (it in 1:n_iter) {
-    cat(sprintf("KL idx = %d, %d samples, iteration %d \n", kl_idx, sample_num[kl_idx], it))
-    X <- XX[sample(1:nrow(X), initial_pop, replace = FALSE),]
-
-    # # normalize, but skip the probablity
-    X <- apply(X, 2, rescale)
-
-    # create random weights
-    lambdas_base = as.vector(runif(n_features))
-    
-    # create π
-    pi_base <- calcQL(X, lambdas_base)
-
-    res <- rmultinom(1, size = multi_samp, prob = pi_base)
-
-    newX <- X
-    pi_tilde = vector(mode = 'numeric', initial_pop)
-
-    j = 1
-    for (i in 1:initial_pop) {
-      if (res[i] > 0) {
-        pi_tilde[i] = res[i] / multi_samp
-      } else {
-        pi_tilde[i] = 0.0
-      }
-    }
-    
-    ret <- calcMaxent(newX, pi_base, pi_tilde)
-    kl_divergence[kl_idx] <- kl_divergence[kl_idx] + ret$kl
-
-    #we now use the derived weights as the generating distribution
-    lambdas_base = ret$lambdas
-    
-    # create π
-    pi_base <- calcQL(X, lambdas_base)
-    res <- rmultinom(1, size = multi_samp, prob = pi_base)
-
-    newX <- X
-    pi_tilde = vector(mode = 'numeric', initial_pop)
-
-    j = 1
-    for (i in 1:initial_pop) {
-      if (res[i] > 0) {
-        pi_tilde[i] = res[i] / multi_samp
-      } else {
-        pi_tilde[i] = 0.0
-      }
-    }
-    
-    ret <- calcMaxent(newX, pi_base, pi_tilde)
-    kl_divergence_com[kl_idx] <- kl_divergence[kl_idx] + ret$kl
+cellFromRaster <- function(lon, lat, raster) {
+  if (length(lon) != length(lat)) stop("lon and lat vectors must be equal length!")
+  
+  cell <- array(0, length(lon))
+  
+  for (i in 1:length(lon)) {
+    cell[i] <- cellFromXY(raster, cbind(lon[i], lat[i]))
   }
   
-  kl_divergence_com[kl_idx] <- kl_divergence[kl_idx] / n_iter
-  kl_idx <- kl_idx + 1
+  return(cell)
 }
 
-filename_kl <- paste("KL_Divergence_", format(Sys.Date(), "%m_%d_%y_"), initial_pop, "_", length(kl_divergence), ".pdf", sep = "")
-kl_dataframe <- data.frame(x = 1:length(kl_divergence) * step_size * initial_pop, kl = kl_divergence)
+assignAndGroupByCell <- function(glossy_data_frame) {
+  raster <- raster("../../resources/bio7_13.tif")
+  X <- glossy_data_frame
+  
+  X$cell <- cellFromRaster(X$lon, X$lat, raster)
+  
+  X <- group_by(X, cell) %>% summarise_all(mean)
+    # summarize(
+    #   lon = mean(lon),
+    #   lat = mean(lat),
+    #   bio1 = mean(bio1),
+    #   bio2 = mean(bio2),
+    #   bio3 = mean(bio3),
+    #   bio4 = mean(bio4),
+    #   bio5 = mean(bio5),
+    #   bio6 = mean(bio6),
+    #   bio8 = mean(bio8),
+    #   bio9 = mean(bio9),
+    #   bio10 = mean(bio10),
+    #   bio11 = mean(bio11),
+    #   bio12 = mean(bio12),
+    #   bio13 = mean(bio13),
+    #   bio14 = mean(bio14),
+    #   bio15 = mean(bio15),
+    #   bio16 = mean(bio16),
+    #   bio17 = mean(bio17),
+    #   bio18 = mean(bio18),
+    #   bio19 = mean(bio19)
+    # )
+  
+  return(X)
+}
 
-#kl <- 
-ggplot(kl_dataframe) +
-  geom_line(aes(x = x, y = kl ,color = 'KL Divergence'))  +
-  geom_point(aes(x = x, y = kl, color = 'KL Divergence')) +
-  xlab("Number of samples") +
-  scale_y_continuous("KL(π, ^π)") +
-  labs(title = "KL Divergence between π, ^π") +
-  theme(plot.title = element_text(hjust = 0.5))
-
-  #ggplot(kl_com_dataframe)+
-  #  geom_line(aes(x=x, y=kl ,color='KL Divergence'))  +
-  #  geom_point(aes(x = x, y = kl, color = 'KL Divergence')) +
-  #  xlab("Number of samples") +
-  #  scale_y_continuous("KL(π, ^π)") +
-  #  labs(title = "KL Divergence between π, ^π") +
-  #  theme(plot.title = element_text(hjust = 0.5))
-
-#print(kl)
-#ggsave(filename_kl)
+groupByCell <- function(data_frame) {
+  grouped_data <- group_by(data_frame, cell) %>%
+    summarize(
+      # freq = nrow(.),
+      lon = mean(lon),
+      lat = mean(lat),
+      bio1 = mean(bio1),
+      bio2 = mean(bio2),
+      bio3 = mean(bio3),
+      bio4 = mean(bio4),
+      bio5 = mean(bio5),
+      bio6 = mean(bio6),
+      bio8 = mean(bio8),
+      bio9 = mean(bio9),
+      bio10 = mean(bio10),
+      bio11 = mean(bio11),
+      bio12 = mean(bio12),
+      bio13 = mean(bio13),
+      bio14 = mean(bio14),
+      bio15 = mean(bio15),
+      bio16 = mean(bio16),
+      bio17 = mean(bio17),
+      bio18 = mean(bio18),
+      bio19 = mean(bio19)
+    )
+  
+  return(grouped_data)
+}

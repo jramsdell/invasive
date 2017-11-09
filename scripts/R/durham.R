@@ -205,12 +205,12 @@ glossy_coords <- na.omit(glossy_coords)
 glossy_spatial_points <- SpatialPoints(glossy_coords, proj4string=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
 
 # PLOT THE POLYGON AND POINTS
-map <- get_map(location = 'united states', zoom = 3, maptype = "terrain", source = 'google', color = 'color')
+map <- get_map(location = 'Boston', zoom = 7, maptype = "terrain", source = 'google', color = 'color')
 ggmap(map) + 
    geom_point(data = nh_coords, aes(x = as.numeric(nh_coords$longitude), y = as.numeric(nh_coords$latitude)), 
               fill = "green", alpha = 0.8, size = 0.0001, shape = 21) +
-   geom_point(data = glossy_coords, aes(x = as.numeric(glossy_coords$longitude), y = as.numeric(glossy_coords$latitude)), 
-              fill = "red", alpha = 0.8, size = 0.001, shape = 21) +
+   # geom_point(data = glossy_coords, aes(x = as.numeric(glossy_coords$longitude), y = as.numeric(glossy_coords$latitude)), 
+              # fill = "red", alpha = 0.8, size = 0.001, shape = 21) +
    geom_polygon(aes(x = coordinates(nh_polygon)[,1], y = coordinates(nh_polygon)[,2]), data = nh_polygon, alpha = 0.5) +
    guides(fill = FALSE, alpha = FALSE, size = FALSE)
 
