@@ -31,6 +31,8 @@ labeled$n[is.na(labeled$n)] <- 0
 feature_columns <- !names(labeled) %in% c('n', 'y', 'cell', 'lat', 'lon')
 labeled[feature_columns] <- apply(labeled[feature_columns], 2, rescale)
 
+#write.csv(labeled, '../../resources/labeled.csv')
+
 # Normalized original distribution
 pi_base <- labeled$n / sum(labeled$n)
 
@@ -38,17 +40,31 @@ pi_base <- labeled$n / sum(labeled$n)
 lambda_base <- maxent(as.matrix(labeled[feature_columns]), pi_base)
 
 # Select a subset
-small_set <- labeled[1:10000,]
+sample_size <- 10000
+small_set <- labeled[1:sample_size,]
 
 # Generate more positive sample points
 pi_small_real <- softmax(as.matrix(small_set[feature_columns]), lambda_base)
-small_samples <- rmultinom(1, size = 100, prob = pi_small_real)[,1]
+small_samples <- rmultinom(1, size = 1000, prob = pi_small_real)[,1]
 
-# 
+# Active learning
 
+## Sample a random sequence for incremental selection
 
-# Sample a small initial set from this distribution
+random_order <- sample.int(sample_size)
 
-# Select the next sample to adjust the model
+random_result <- array(NA, sample_size)
+
+for (i in 1:sample_size) {
+  # Baseline method: Selecting samples in random order
+  random_result[i] <- sum(small_samples[random_order[1:i]])
+}
+
+# Discussion
+
+## Plot results
+
+ggplot() + geom_line(aes(x = seq.int(sample_size), y = random_result))
+
 
 
