@@ -40,7 +40,7 @@ def parse_new(lines):
         if not inside_bounds(lon, lat):
             continue
 
-        results.append([lon, lat, observed])
+        results.append([lat, lon, observed])
     return results
 
 
