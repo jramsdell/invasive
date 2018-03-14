@@ -1,0 +1,191 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(caret)
+library(dplyr)
+set.seed(100)
+glossy <- readRDS("../../resources/new_glossy_data_frame.rds")
+colnames(glossy) <- gsub('_13', '', colnames(glossy), fixed=TRUE)
+
+
+
+glossy %>% filter(present == "True") %>% count
+#9119
+glossy <- glossy %>% mutate(id = seq_along(present))
+
+
+
+response_sample_true <- glossy %>% filter(present == "True") %>% sample_frac(0.05)
+response_sample_false <- glossy %>% filter(present == "False") %>% sample_frac(0.05)
+
+test_set = response_sample_true %>% rbind(response_sample_false)
+
+train_set <- anti_join(glossy, test_set, by="id")
+response <- train_set %>% select(present)
+predictors <- train_set %>% select( -one_of("lon", "lat", "present", "id"))
+
+
+
+
+#run_sdm(test_set, predictors, response, "glm")
+
+# ctrl <- rfeControl(functions = lmFuncs,
+#                    method = "repeatedcv",
+#                    repeats = 10,
+#                    verbose = FALSE)
+# 
+# respYeps <- response %>% mutate(yeps = if_else(present == "True", 1, 0)) %>% .$yeps
+# 
+# lmProfile <- rfe(as.matrix(predictors), as.matrix(respYeps), sizes = c(2:10), rfeControl = ctrl)
+# lmProfile
+best_vars <- c("bio11", "bio3", "bio10", "bio14", "bio1")
+
+cur_model <- train(as.matrix(predictors), as.matrix(response), method="glm")
+summary(cur_model)
+p <- predict(rasters, cur_model)
+plot(p)
+
+```
+
+
+##Experimenting with rasters
+
+```{r}
+library(rgdal)
+library(raster)
+data.path <- "../../resources"
+rasters <- readRDS("../../resources/bio_13.rds")
+extent(zone_t13_tmean)
+resolution(zone_t13_tmean)
+coord
+# +proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0 
+# -90, -60, 30, 60  (xmin, xmax, ymin, ymax)
+# 3600, 3600, 12960000  (nrow, ncol, ncell)
+
+getValues(zone_13_tmean)
+
+temp_matrix<-array(NA,c(11,11))
+raster(x, xmn=0, xmx=1, ymn=0, ymx=1, crs=NA, template=NULL)
+new_raster <- raster(zone_13_tmean)
+
+new_raster
+plot(new_raster)
+
+setValues(new_raster, getValues(zone_13_tmean))
+values(new_raster) <- runif(ncell(new_raster))
+plot(new_raster)
+```
+
+```{r}
+library(GRaF)
+library(raster)
+library(dplyr)
+
+#coords <- test_set %>% select(one_of(best_vars))
+coords <- test_set %>% select(-one_of(c("lat", "lon", "present", "id")))
+latlon <- test_set %>% select(lat, lon)
+
+yeps <- test_set %>% mutate(yeps = if_else(present == "True", 1, 0)) %>% .$yeps
+
+#yeps <- rbinom(100, 1, 1.0)
+
+
+gp_model <- graf(yeps, coords, opt.l = FALSE)
+
+gp2_model <- graf(yeps, latlon, opt.l = TRUE)
+
+plot(gp2_model)
+
+pred_model <- predict.graf(gp_model, rasters, type='latent', CI='std')
+pred_model <- predict.graf(gp_model, rasters, type='latent', CI='std')
+plot(pred_model)
+
+
+elevation <- raster("/home/hcgs/Desktop/projects/rstudio/temp/HYP_HR/HYP_HR.tif")
+e <- new("Extent"
+         , xmin = -75.5
+         , xmax = -66.75
+         , ymin = 39.86667
+         , ymax = 45.79167)
+elevation <- crop(elevation, e)
+plot(elevation)
+
+
+#plot(predict(gp_model, coords))
+
+
+```
+
+
+
+```{r}
+library(spatstat)
+library(geostatsp)
+library(maptools)
+
+wind <- glossy %>% 
+  filter(present == "True") %>%
+  select(lat, lon) %>% 
+  owin(yrange = range(.$lon), xrange = range(.$lat))
+
+
+point_data <- glossy %>%
+  filter(present == "True") %>%
+  select(lat, lon) %>% 
+  ppp(x = .$lat, y = .$lon, window = wind)
+
+get_raster_image <- function(raster_layer) {
+  as.im.RasterLayer(as.factor(raster(rasters, layer=raster_layer)))
+}
+
+bio1im <- as.im.RasterLayer(as.factor(raster(rasters, layer=1)))
+bio2im <- as.im.RasterLayer(as.factor(raster(rasters, layer=2)))
+bio3im <- as.im.RasterLayer(as.factor(raster(rasters, layer=3)))
+bio4im <- as.im.RasterLayer(as.factor(raster(rasters, layer=4)))
+bio5im <- as.im.RasterLayer(as.factor(raster(rasters, layer=5)))
+bio6im <- as.im.RasterLayer(as.factor(raster(rasters, layer=6)))
+bio7im <- as.im.RasterLayer(as.factor(raster(rasters, layer=7)))
+bio8im <- as.im.RasterLayer(as.factor(raster(rasters, layer=8)))
+bio9im <- as.im.RasterLayer(as.factor(raster(rasters, layer=9)))
+bio10im <- as.im.RasterLayer(as.factor(raster(rasters, layer=10)))
+bio11im <- as.im.RasterLayer(as.factor(raster(rasters, layer=11)))
+bio12im <- as.im.RasterLayer(as.factor(raster(rasters, layer=12)))
+bio13im <- as.im.RasterLayer(as.factor(raster(rasters, layer=13)))
+bio14im <- as.im.RasterLayer(as.factor(raster(rasters, layer=14)))
+bio15im <- as.im.RasterLayer(as.factor(raster(rasters, layer=15)))
+bio16im <- as.im.RasterLayer(as.factor(raster(rasters, layer=16)))
+bio17im <- as.im.RasterLayer(as.factor(raster(rasters, layer=17)))
+bio18im <- as.im.RasterLayer(as.factor(raster(rasters, layer=18)))
+bio19im <- as.im.RasterLayer(as.factor(raster(rasters, layer=19)))
+
+
+
+my_model <- ppm(point_data, ~., covariates = list(b3 = bio3im, b4 = bio4im, b5 = bio5im))
+
+my_pred <- predict.ppm(my_model)
+result <- rmh(my_model)
+
+#Plots gibbs
+#plot(rmh(ppm(point_data ~ bio1im)))
+```
+
+
+```{r}
+worldClim <- getData("worldclim", var = "bio", res = 10)
+e <- new("Extent"
+         , xmin = -170.151570261652
+         , xmax = -46.697562902546
+         , ymin = 22.2257739512731
+         , ymax = 71.8960432313611)
+
+
+worldClim <- crop(worldClim, e)
+
+keep <- which(names(worldClim) %in% colnames(coords))
+worldClim <- worldClim[[keep]]
+```
+

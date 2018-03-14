@@ -1,0 +1,30 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+source("jsr_include.R")
+select <- dplyr::select
+
+list[glossy, rasters] <- get_init_data()
+list[test_set, train_set] <- get_test_train(glossy, 0.02, 0.01)
+
+```
+
+
+
+```{r}
+library(GRaF)
+
+bio_predictors <- test_set %>% select(-one_of(c("lat", "lon", "present", "id")))
+binomial_response <- test_set %>% mutate(yeps = if_else(present == "True", 1, 0)) %>% .$yeps
+
+gp_model <- graf(binomial_response, bio_predictors, opt.l = FALSE)
+gp_model.pred <- predict.graf(gp_model, rasters, type='latent', CI='std')
+plot(gp_model.pred)
+
+```
+

@@ -1,0 +1,41 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+source("jsr_include.R")
+select <- dplyr::select
+
+list[glossy, rasters] <- get_init_data()
+list[test_set, train_set] <- get_test_train(glossy, 0.02, 0.01)
+
+response <- train_set %>% select(present)
+predictors <- train_set %>% select( -one_of("lon", "lat", "present", "id"))
+```
+
+```{r}
+control <- trainControl(
+                      method = "cv",
+                      number=5,
+                      verbose = FALSE)
+
+# ctrl <- rfeControl(functions = lmFuncs,
+#                    method = "repeatedcv",
+#                    repeats = 10,
+#                    verbose = FALSE)
+# 
+
+run_sdm <- function(test_data, x, y, method) {
+  mymodel <- train(as.matrix(x), as.matrix(y), method=method)
+  predicted_classes <- predict(mymodel, test_data)
+  confusionMatrix(data = predicted_classes, test_data$present)
+}
+
+glm_model <- train(as.matrix(predictors), as.matrix(response), method="glm")
+summary(glm_model)
+glm_model.pred <- predict(rasters, glm_model)
+plot(glm_model.pred)
+```
+

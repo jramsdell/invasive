@@ -50,3 +50,7 @@ y.transf.betareg <- function(y) {
 
 logistic <- function(p)
   log(p / (1 - p) + 0.01)
+
+
+
+

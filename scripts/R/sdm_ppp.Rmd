@@ -1,0 +1,66 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+source("jsr_include.R")
+select <- dplyr::select
+
+list[glossy, rasters] <- get_init_data()
+list[test_set, train_set] <- get_test_train(glossy, 0.02, 0.01)
+```
+
+```{r}
+library(spatstat)
+library(geostatsp)
+library(maptools)
+
+wind <- glossy %>% 
+  filter(present == "True") %>%
+  select(lat, lon) %>% 
+  owin(yrange = range(.$lon), xrange = range(.$lat))
+
+
+point_data <- glossy %>%
+  filter(present == "True") %>%
+  select(lat, lon) %>% 
+  ppp(x = .$lat, y = .$lon, window = wind)
+
+get_raster_image <- function(raster_layer) {
+  as.im.RasterLayer(as.factor(raster(rasters, layer=raster_layer)))
+}
+
+bio1im <- as.im.RasterLayer(as.factor(raster(rasters, layer=1)))
+bio2im <- as.im.RasterLayer(as.factor(raster(rasters, layer=2)))
+bio3im <- as.im.RasterLayer(as.factor(raster(rasters, layer=3)))
+bio4im <- as.im.RasterLayer(as.factor(raster(rasters, layer=4)))
+bio5im <- as.im.RasterLayer(as.factor(raster(rasters, layer=5)))
+bio6im <- as.im.RasterLayer(as.factor(raster(rasters, layer=6)))
+bio7im <- as.im.RasterLayer(as.factor(raster(rasters, layer=7)))
+bio8im <- as.im.RasterLayer(as.factor(raster(rasters, layer=8)))
+bio9im <- as.im.RasterLayer(as.factor(raster(rasters, layer=9)))
+bio10im <- as.im.RasterLayer(as.factor(raster(rasters, layer=10)))
+bio11im <- as.im.RasterLayer(as.factor(raster(rasters, layer=11)))
+bio12im <- as.im.RasterLayer(as.factor(raster(rasters, layer=12)))
+bio13im <- as.im.RasterLayer(as.factor(raster(rasters, layer=13)))
+bio14im <- as.im.RasterLayer(as.factor(raster(rasters, layer=14)))
+bio15im <- as.im.RasterLayer(as.factor(raster(rasters, layer=15)))
+bio16im <- as.im.RasterLayer(as.factor(raster(rasters, layer=16)))
+bio17im <- as.im.RasterLayer(as.factor(raster(rasters, layer=17)))
+bio18im <- as.im.RasterLayer(as.factor(raster(rasters, layer=18)))
+bio19im <- as.im.RasterLayer(as.factor(raster(rasters, layer=19)))
+
+
+
+my_model <- ppm(point_data, ~., covariates = list(b3 = bio3im, b4 = bio4im, b5 = bio5im,
+                                                  b10 = bio10im))
+
+my_pred <- predict.ppm(my_model)
+result <- rmh(my_model)
+
+plot(my_pred) 
+plot(result) # Points sampled from distribution 
+```
+
