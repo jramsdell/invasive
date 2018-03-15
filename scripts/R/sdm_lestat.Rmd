@@ -1,0 +1,37 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+source("jsr_include.R")
+select <- dplyr::select
+
+list[glossy, rasters] <- get_init_data()
+list[test_set, train_set] <- get_test_train(glossy, 0.05, 0.02)
+```
+
+```{r}
+library(lestat)
+data1 <- simulate(normal(3.3, log(2)), 9)
+data2 <- simulate(normal(4.5, log(2)), 8)
+data3 <- simulate(normal(2.9, log(2)), 7)
+
+
+design <- designManyGroups(c(9,8,7))
+
+posterior <- linearmodel(c(data1, data2, data3), design)
+plot(posterior)
+
+prior <- normalgamma()
+full <- linearpredict(prior, rep(1, 7))
+data <- simulate(normal(), 7)
+posterior <- conditional(full, 1:7, data)
+
+
+
+
+```
+

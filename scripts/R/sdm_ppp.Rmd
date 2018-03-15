@@ -9,7 +9,7 @@ source("jsr_include.R")
 select <- dplyr::select
 
 list[glossy, rasters] <- get_init_data()
-list[test_set, train_set] <- get_test_train(glossy, 0.02, 0.01)
+list[test_set, train_set] <- get_test_train(glossy, 0.1, 0.05)
 ```
 
 ```{r}
@@ -17,16 +17,19 @@ library(spatstat)
 library(geostatsp)
 library(maptools)
 
-wind <- glossy %>% 
+wind <- test_set %>% 
   filter(present == "True") %>%
   select(lat, lon) %>% 
   owin(yrange = range(.$lon), xrange = range(.$lat))
 
 
-point_data <- glossy %>%
+point_data <- test_set %>%
   filter(present == "True") %>%
   select(lat, lon) %>% 
   ppp(x = .$lat, y = .$lon, window = wind)
+
+#marks(point_data) <- test_set$present
+
 
 get_raster_image <- function(raster_layer) {
   as.im.RasterLayer(as.factor(raster(rasters, layer=raster_layer)))
@@ -54,13 +57,44 @@ bio19im <- as.im.RasterLayer(as.factor(raster(rasters, layer=19)))
 
 
 
-my_model <- ppm(point_data, ~., covariates = list(b3 = bio3im, b4 = bio4im, b5 = bio5im,
-                                                  b10 = bio10im))
+# my_model <- ppm(point_data, ~., covariates = list(b3 = bio3im,
+#                                                   b16 = bio16im,
+#                                                   b17 = bio17im
+#     ))
+
+covs <- list(b1 = bio1im, b2 = bio2im, b10 = bio10im, b18 = bio18im)
+
+# covs <- list(b1 = bio1im,
+#              b2 = bio2im,
+#              b3 = bio3im,
+#              b4 = bio4im,
+#              b5 = bio5im,
+#              b6 = bio6im,
+#              b8 = bio8im,
+#              b9 = bio9im,
+#              b10 = bio10im,
+#              b11 = bio11im,
+#              b12 = bio12im,
+#              b13 = bio13im,
+#              b14 = bio14im,
+#              b15 = bio15im,
+#              b16 = bio16im,
+#              b17 = bio17im,
+#              b18 = bio18im,
+#              b19 = bio19im)
+
+#my_model <- ppm(point_data, ~., covariates = covs)
+my_model <- ppm(point_data, ~., Strauss(r = 0.5), covariates = covs)
+
 
 my_pred <- predict.ppm(my_model)
 result <- rmh(my_model)
+plot(predict(my_model))
 
+
+plot(density(result, sigma=0.05, kernel = "gaussian", diggle=TRUE))
+diagnose.ppm(my_model)
 plot(my_pred) 
-plot(result) # Points sampled from distribution 
+plot(result) # Points sampled from distribution using Gibbs 
 ```
 

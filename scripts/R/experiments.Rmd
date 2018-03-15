@@ -1,0 +1,133 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+req_packs <- c("rgdal", "ggmap", "ggplo2", "stringr", "raster", 
+               "sp", "geosphere", "zoo", "rgeos", "dplyr")
+lapply(req_packs, require, character.only = TRUE)
+#require(rgdal, ggmap, ggplo2, stringr, raster, sp, geosphere, zoo, rgeos, dplyr)
+glossy_data = read.csv('../../resources/glossy_observations.csv', header = TRUE, sep = ",")
+
+nh_coords <- data.frame("longitude"=c(-73.80615234125003, -74.15771484125003, -75.49804687250003, 
+                                      -75.14648437250003, -69.71923827875003, -66.75292968500003, 
+                                      -67.76367187250003, -69.98291015375003, -70.64208984125003 ),
+                        "latitude"=c(45.48513871959699, 42.01049756503889, 42.01049756503889, 
+                                     39.86966235384007, 41.18895670533026, 44.80324484552226, 
+                                     45.79239431452086, 44.34935530251231, 45.26905723017684))
+
+nh_polygon <- Polygon(as.matrix(nh_coords))
+
+glossy_data %>% 
+  select (lat, lon) %>%
+  SpatialPoints(proj4string=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs")) -> 
+  glossy_spatial_points
+
+#CREATE A SPATIAL POLYGON FOR THE BOUNDING BOX
+Ps1 = SpatialPolygons(list(Polygons(list(nh_polygon), ID = "a")), proj4string = CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+
+data.path <- "../../resources"
+bio_13 <- stack()
+var_names = c()
+zone_13_tmean <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio1_13.tif", sep = ''))
+zone_13_mdr <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio2_13.tif", sep = ''))
+zone_13_iso <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio3_13.tif", sep = ''))
+zone_13_ts <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio4_13.tif", sep = ''))
+zone_13_tmax_month <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio5_13.tif", sep = ''))
+zone_13_tmin_month <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio6_13.tif",sep = ''))
+zone_13_tar <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio7_13.tif", sep = ''))
+zone_13_tmean_wettest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio8_13.tif", sep = ''))
+zone_13_tmean_driest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio9_13.tif", sep = ''))
+zone_13_tmean_warmest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio10_13.tif", sep = ''))
+zone_13_tmean_coldest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio11_13.tif", sep = ''))
+zone_13_prec_an <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio12_13.tif", sep = ''))
+zone_13_prec_wettest_month <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio13_13.tif", sep = ''))
+zone_13_prec_driest_month <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio14_13.tif", sep = ''))
+zone_13_ps <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio15_13.tif", sep = ''))
+zone_13_prec_wettest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio16_13.tif", sep = ''))
+zone_13_prec_driest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio17_13.tif", sep = ''))
+zone_13_prec_warmest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio18_13.tif", sep = ''))
+zone_13_prec_coldest <- raster(paste(data.path, "/clim_zones/bio_13_tif/bio19_13.tif", sep = ''))
+
+bio_13 <- stack(bio_13, 
+                zone_13_tmean,
+                zone_13_mdr,
+                zone_13_iso,
+                zone_13_ts,
+                zone_13_tmax_month,
+                zone_13_tmin_month,
+                zone_13_tar,
+                zone_13_tmean_wettest,
+                zone_13_tmean_driest,
+                zone_13_tmean_warmest,
+                zone_13_tmean_coldest,
+                zone_13_prec_an,
+                zone_13_prec_wettest_month,
+                zone_13_prec_driest_month,
+                zone_13_ps,
+                zone_13_prec_wettest,
+                zone_13_prec_driest,
+                zone_13_prec_warmest,
+                zone_13_prec_coldest)
+
+var_names <- c(
+  "bio1",
+  "bio2",
+  "bio3",
+  "bio4",
+  "bio5",
+  "bio6",
+  "bio7",
+  "bio8",
+  "bio9",
+  "bio10",
+  "bio11",
+  "bio12",
+  "bio13",
+  "bio14",
+  "bio15",
+  "bio16",
+  "bio17",
+  "bio18",
+  "bio19"
+)
+
+df_names <- c(
+  "lon",
+  "lat",
+  "bio1",
+  "bio2",
+  "bio3",
+  "bio4",
+  "bio5",
+  "bio6",
+  "bio7",
+  "bio8",
+  "bio9",
+  "bio10",
+  "bio11",
+  "bio12",
+  "bio13",
+  "bio14",
+  "bio15",
+  "bio16",
+  "bio17",
+  "bio18",
+  "bio19"
+)
+
+# GET THE GLOSSY POINTS FROM RASTER
+# CREATE DATAFRAMES FROM RASTER FOR PRESENCE AND UNKNONW POINTS
+
+
+glossy_data_frame <- extract(bio_13, glossy_spatial_points, method = 'bilinear', na.rm = TRUE)
+glossy_data_frame <- as.data.frame(glossy_data_frame) %>%
+  mutate(lon = glossy_data$lon, lat = glossy_data$lat, present = glossy_data$present)
+
+glossy_data_frame <- glossy_data_frame[complete.cases(glossy_data_frame), ]
+saveRDS(glossy_data_frame, "../../resources/new_glossy_data_frame.rds")
+
+```
+

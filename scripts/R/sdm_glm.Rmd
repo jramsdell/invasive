@@ -9,13 +9,16 @@ source("jsr_include.R")
 select <- dplyr::select
 
 list[glossy, rasters] <- get_init_data()
-list[test_set, train_set] <- get_test_train(glossy, 0.02, 0.01)
+list[test_set, train_set] <- get_test_train(glossy, 0.1, 0.03)
 
-response <- train_set %>% select(present)
-predictors <- train_set %>% select( -one_of("lon", "lat", "present", "id"))
+train_responses <- train_set %>% select(present)
+train_predictors <- train_set %>% select( -one_of("lon", "lat", "present", "id"))
+test_responses <- test_set %>% select(present)
+test_predictors <- test_set %>% select( -one_of("lon", "lat", "present", "id"))
 ```
 
 ```{r}
+library(ROCR)
 control <- trainControl(
                       method = "cv",
                       number=5,
@@ -33,9 +36,19 @@ run_sdm <- function(test_data, x, y, method) {
   confusionMatrix(data = predicted_classes, test_data$present)
 }
 
-glm_model <- train(as.matrix(predictors), as.matrix(response), method="glm")
-summary(glm_model)
-glm_model.pred <- predict(rasters, glm_model)
+responses <- train_responses %>% mutate(yeps = if_else(present == "True", 1, 0 )) %>% .$yeps
+
+
+glm_model <- train(as.matrix(train_predictors), as.matrix(train_responses$present), method="glm")
+glm_pred <- predict(glm_model, as.matrix(train_predictors), type="prob")
+
+
+generate_roc(glm_pred$True, train_responses)
+#confusionMatrix(predict(glm_model, as.matrix(train_predictors)), as.matrix(train_response))
+
+
+glm_model.pred <- predict(rasters, glm_model, type="prob")
+values(glm_model.pred) <- 1 - values(glm_model.pred) # need to flip values for True probs
 plot(glm_model.pred)
 ```
 

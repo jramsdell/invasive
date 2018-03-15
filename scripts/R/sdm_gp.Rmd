@@ -10,7 +10,8 @@ source("jsr_include.R")
 select <- dplyr::select
 
 list[glossy, rasters] <- get_init_data()
-list[test_set, train_set] <- get_test_train(glossy, 0.02, 0.01)
+list[test_set, train_set] <- get_test_train(glossy, 0.05, 0.03)
+#list[test_set, train_set] <- get_test_train(glossy, 0.01, 0.005)
 
 ```
 
@@ -18,12 +19,31 @@ list[test_set, train_set] <- get_test_train(glossy, 0.02, 0.01)
 
 ```{r}
 library(GRaF)
+library(ROCR)
 
 bio_predictors <- test_set %>% select(-one_of(c("lat", "lon", "present", "id")))
+train_predictors <- train_set %>% select(-one_of(c("lat", "lon", "present", "id")))
 binomial_response <- test_set %>% mutate(yeps = if_else(present == "True", 1, 0)) %>% .$yeps
+train_response <- train_set %>% mutate(yeps = if_else(present == "True", 1, 0)) %>% .$yeps
 
 gp_model <- graf(binomial_response, bio_predictors, opt.l = FALSE)
-gp_model.pred <- predict.graf(gp_model, rasters, type='latent', CI='std')
+
+gp_model.testpred <- as.data.frame(predict.graf(gp_model, train_predictors, type='response'))
+gp_model.testpred$posterior <- gp_model.testpred$`posterior mode`
+
+generate_roc(gp_model.testpred$posterior, train_response)
+
+
+stuff <- gp_model.testpred %>%
+  mutate(present = as.factor(train_response), 
+         called = as.factor(if_else(posterior >= 0.5, 1, 0))) 
+
+confusionMatrix(stuff$called, stuff$present)
+factor(sample(rep(letters[1:2], 200), 50))
+
+
+#gp_model.pred <- predict.graf(gp_model, rasters, type='latent', CI='std')
+gp_model.pred <- predict.graf(gp_model, rasters, type='response', CI=NULL)
 plot(gp_model.pred)
 
 ```

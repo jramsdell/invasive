@@ -1,0 +1,102 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+source("jsr_include.R")
+select <- dplyr::select
+
+list[glossy, rasters] <- get_init_data()
+list[test_set, train_set] <- get_test_train(glossy, 0.05, 0.02)
+```
+
+```{r}
+library(DPpackage)
+data(rolling)
+
+
+test_set <- test_set %>% mutate(yeps = if_else(present == "True", 1, 0 ))
+
+
+
+#prior <- list(alpha=1, a1=1, b1=1)
+prior <- list(a0=2,b0=1,beta0=rep(0,2), Sbeta0=diag(10000,2))
+
+mcmc <- list(nburn=500,
+             nsave=1000,
+             nskip=3,
+             ndisplay=100)
+state <- NULL
+fit <- DPbinary( test_set$yeps ~ test_set$lat + test_set$bio1, 
+                prior=prior,
+                mcmc=mcmc,
+                state=state,
+                status=TRUE)
+
+pred <- predict(fit)
+
+
+plot(fit, output="density")
+
+
+
+npred<-40
+xnew<-cbind(c(1,1),c(0.4, 0.4))
+#xnew<-cbind(rep(c(1,1),npred),seq(0,4,length=npred))
+xnew
+
+pp<-predict(fit,xnew)
+pp
+predict(fit)
+
+plot(seq(0,4,length=npred),
+     pp$pmean,
+     type='l',
+     ylim=c(0,1),
+      xlab="log2(concentration)",ylab="Probability")
+
+
+```
+
+```{r}
+dtrue <- function(grid,x) {
+  exp(-2*x)*dnorm(grid,mean=x,sd=sqrt(0.01))+
+  (1-exp(-2*x))*dnorm(grid,mean=x^4,sd=sqrt(0.04))
+}
+
+nobs <- 500
+x <- runif(nobs)
+y1 <- x + rnorm(nobs, 0, sqrt(0.01))
+y2 <- x^4 + rnorm(nobs, 0, sqrt(0.04))
+u <- runif(nobs)
+prob <- exp(-2*x)
+y <- ifelse(u<prob,y1,y2)
+
+w <- cbind(y,x)
+wbar <- apply(w,2,mean)
+wcov <- var(w)
+
+prior <- list(a0=10,
+    b0=1,
+    nu1=4,
+    nu2=4,
+    s2=0.5*wcov,
+    m2=wbar,
+    psiinv2=2*solve(wcov),
+    tau1=6.01,
+    tau2=2.01)
+
+state <- NULL
+
+
+mcmc <- list(nburn=500,
+    nsave=500,
+    nskip=3,
+    ndisplay=100)
+
+
+```
+

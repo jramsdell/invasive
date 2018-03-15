@@ -24,3 +24,10 @@ get_init_data <- function() {
   
   list(glossy, rasters)
 }
+
+generate_roc <- function(predictions, labels) {
+  library(ROCR)
+  r_pred <- prediction(predictions, labels)
+  r_perf <- performance(r_pred, measure = "tpr", x.measure = "fpr")
+  plot(r_perf)
+}
